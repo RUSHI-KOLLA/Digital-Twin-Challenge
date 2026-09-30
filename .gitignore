@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+data/raw/cgmacros/CGMacros_dateshifted365.zip
+data/raw/cgmacros/unzipped/
+data/processed/
+results/
+*.parquet
