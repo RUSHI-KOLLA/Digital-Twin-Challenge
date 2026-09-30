@@ -6,6 +6,4 @@ data/raw/cgmacros/unzipped/
 data/processed/*.parquet
 results/*.parquet
 results/*.pkl
-results/*.txt
 models/*.pkl
-models/*.txt
