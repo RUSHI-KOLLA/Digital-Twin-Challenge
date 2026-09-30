@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 data/raw/cgmacros/CGMacros_dateshifted365.zip
 data/raw/cgmacros/unzipped/
-data/processed/
-results/
-*.parquet
+data/processed/*.parquet
+results/*.parquet
+results/*.pkl
+results/*.txt
+models/*.pkl
+models/*.txt
