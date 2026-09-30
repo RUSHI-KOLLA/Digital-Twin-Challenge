@@ -17,7 +17,7 @@ import streamlit as st
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "models"))
-from lightgbm_v1 import FEATS  # noqa: E402
+from lightgbm_v1 import FEATS, add_features, add_static  # noqa: E402
 
 st.set_page_config(page_title="GlucoTwin — T2D Digital Twin", layout="wide")
 FOOTER = ("Synthetic composite patient / open data — no open Indian CGM data "
@@ -30,7 +30,14 @@ def load_all():
     with open("data/synthetic/personas.json") as f:
         personas = json.load(f)["personas"]
     feat = "data/processed/features.parquet"
-    d = pd.read_parquet(feat)
+    try:
+        d = pd.read_parquet(feat)
+    except FileNotFoundError:
+        # fresh clone: build feature cache from unified (no training)
+        u = pd.read_parquet("data/processed/unified.parquet")
+        u["timestamp"] = pd.to_datetime(u["timestamp"])
+        d = add_static(add_features(u))
+        d.to_parquet(feat, index=False)
     d["timestamp"] = pd.to_datetime(d["timestamp"])
     reg = lgb.Booster(model_file="models/lgbm_reg60.txt")
     clf = lgb.Booster(model_file="models/lgbm_event.txt")
