@@ -1,0 +1,9 @@
+# Frozen-model serving config (single place both services read at startup).
+# Models are never retrained post-freeze (see models/freeze.json).
+reg_model: models/lgbm_reg60.txt
+clf_model: models/lgbm_event.txt
+conformal: results/conformal.json
+operating_point: results/operating_point.json
+demo_window: results/demo_window.json
+personas: data/synthetic/personas.json
+event_threshold_mgdl: 180

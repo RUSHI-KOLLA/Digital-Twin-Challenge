@@ -40,10 +40,11 @@ def mono_for(feats):
             (-1 if f.startswith("steps_") else 0) for f in feats]
 
 
-def run_variant(d, feats, groups):
+def run_variant(d, feats, groups, tag):
     X = d[feats].to_numpy()
     yt = d["target_glucose_60"].to_numpy()
     ye = d["event_60"].to_numpy()
+    ts = d["timestamp"]
     mono = mono_for(feats)
     gkf = GroupKFold(n_splits=5)
     pr = np.full(len(d), np.nan)
@@ -59,6 +60,10 @@ def run_variant(d, feats, groups):
                                monotone_constraints=mono, verbose=-1)
         c.fit(X[tr], ye[tr])
         pc[te] = c.predict_proba(X[te])[:, 1]
+    pd.DataFrame({"patient_id": groups, "timestamp": ts.to_numpy(),
+                  "y60": yt, "p60": pr,
+                  "event": ye, "escore": pc}).to_parquet(
+        f"results/oof_ablation_{tag}.parquet", index=False)
     return (float(np.sqrt(np.mean((yt - pr) ** 2))),
             float(roc_auc_score(ye, pc)),
             float(average_precision_score(ye, pc)))
@@ -69,12 +74,17 @@ def main():
     u["timestamp"] = pd.to_datetime(u["timestamp"])
     u = add_features(u)
     u = add_static(u)
+    # steps_* were dropped from shared features (dead); rebuild here so the
+    # historical C variant keeps its published meaning
+    g = u.groupby("patient_id", group_keys=False)
+    u["steps_30"] = g["steps"].transform(lambda s: s.rolling(6, min_periods=1).sum())
+    u["steps_60"] = g["steps"].transform(lambda s: s.rolling(12, min_periods=1).sum())
     m = u["target_glucose_120"].notna() & u["event_60"].notna()
     d = u.loc[m].reset_index(drop=True)
     groups = d["patient_id"].to_numpy()
     rows = []
     for name, feats in VARIANTS.items():
-        rmse, auroc, auprc = run_variant(d, feats, groups)
+        rmse, auroc, auprc = run_variant(d, feats, groups, name)
         rows.append({"variant": name, "n_features": len(feats),
                      "rmse_60": rmse, "auroc": auroc, "auprc": auprc})
         print(rows[-1])

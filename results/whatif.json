@@ -1,10 +1,11 @@
 {
-  "patient_id": 35.0,
-  "timestamp": "2024-12-13 08:40:00",
-  "glucose_now": 400.0,
-  "pred_base": 356.89795494982883,
-  "pred_fewer_carbs": 338.6674234566791,
-  "pred_walk": 345.6924470227163,
+  "patient_id": 39.0,
+  "timestamp": "2025-02-16 12:05:00",
+  "glucose_now": 153.2,
+  "pred_base": 235.53462277340978,
+  "pred_fewer_carbs": 230.78806507573313,
+  "pred_walk": 228.1264163613714,
   "walk_lowers": true,
-  "carbs_lower": true
+  "carbs_lower": true,
+  "lead_min_to_180": 30
 }

@@ -1,10 +1,10 @@
 {
   "patient_id": 39,
-  "timestamp": "2025-02-17 09:20:00",
-  "glucose_now": 112.8,
-  "pred_60": 193.0,
-  "pred_walk": 188.8,
-  "pred_fewer_carbs": 178.0,
-  "risk": 0.797,
-  "lead_min_to_180": 55
+  "timestamp": "2025-02-16 12:05:00",
+  "glucose_now": 153.2,
+  "pred_60": 235.5,
+  "pred_walk": 228.1,
+  "pred_fewer_carbs": 230.8,
+  "risk": 0.82,
+  "lead_min_to_180": 30
 }

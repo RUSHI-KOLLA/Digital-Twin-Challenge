@@ -7,10 +7,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY AGENTS.md README.md ./
 COPY api/ ./api/
 COPY dashboard/ ./dashboard/
+COPY docker/ ./docker/
 COPY src/ ./src/
 COPY models/ ./models/
 COPY results/ ./results/
 COPY configs/ ./configs/
-COPY data/processed/ ./data/processed/
 COPY data/synthetic/ ./data/synthetic/
+# NOTE: no COPY data/processed (gitignored) and no data/raw (1.3 GB):
+# the entrypoint rebuilds processed data from open CGMacros on first boot.
+RUN chmod +x docker/entrypoint.sh
+ENTRYPOINT ["docker/entrypoint.sh"]
 EXPOSE 8000 8501

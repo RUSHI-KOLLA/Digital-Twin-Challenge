@@ -43,14 +43,16 @@ def load_all():
     clf = lgb.Booster(model_file="models/lgbm_event.txt")
     with open("results/conformal.json") as f:
         q90 = json.load(f)["q90_half_width"]
+    with open("results/operating_point.json") as f:
+        op = json.load(f)["best"]  # tuned AND rule: band AND risk>=t
     with open("results/demo_window.json") as f:
         demo = json.load(f)
     tri = pd.read_csv("results/triage.csv")
     abl = pd.read_csv("results/ablation.csv")
-    return personas, d, reg, clf, q90, demo, tri, abl
+    return personas, d, reg, clf, q90, demo, tri, abl, op
 
 
-personas, D, REG, CLF, Q90, DEMO, TRI, ABL = load_all()
+personas, D, REG, CLF, Q90, DEMO, TRI, ABL, OP = load_all()
 names = [p["name"] for p in personas]
 sel = st.sidebar.selectbox("Patient", names, index=0)
 P = next(p for p in personas if p["name"] == sel)
@@ -73,7 +75,11 @@ rows["pred_60"] = REG.predict(X)
 rows["risk"] = CLF.predict(X)
 rows["hi_60"] = rows["pred_60"] + Q90
 rows["lo_60"] = rows["pred_60"] - Q90
-rows["alert"] = (rows["hi_60"] > 180) | (rows["risk"] >= 0.5)
+band = rows["hi_60"] > 180
+if OP["rule"] == "AND":
+    rows["alert"] = band & (rows["risk"] >= OP["t"])
+else:
+    rows["alert"] = band | (rows["risk"] >= OP["t"])
 
 i = st.sidebar.slider("Replay time (5-min bins)", 0, len(rows) - 1,
                       value=int(rows[rows["timestamp"] <= DEMO["timestamp"]].shape[0]) - 1
@@ -90,14 +96,20 @@ def day_drivers(_pid: float, _day: str):
     # LightGBM pred_contrib = TreeSHAP values, one vectorized call (no training)
     Xd = rws[FEATS].to_numpy(dtype=float)
     contrib = np.asarray(REG.predict(Xd, pred_contrib=True))[:, :-1]
-    plain = {"glucose": "current glucose", "slope_30": "rising slope",
-             "carbs_60": "carb load", "activity_60": "low activity",
-             "hr_30": "heart rate", "a1c": "HbA1c",
+    plain = {"glucose": "current glucose", "slope_15": "15-min slope",
+             "slope_30": "rising slope", "roll_mean_30": "recent average",
+             "roll_std_30": "glucose variability", "roll_mean_60": "1-hour average",
+             "roll_std_60": "1-hour variability", "carbs_60": "carb load",
+             "carbs_120": "2-hour carb load", "activity_60": "low activity",
+             "hr_30": "heart rate", "tod_sin": "time of day",
+             "tod_cos": "time of day", "dow": "day of week",
              "time_since_meal": "recent meal"}
     out = {}
-    for (_, row), sv, p, rsk in zip(rws.iterrows(), contrib,
-                                    REG.predict(Xd), CLF.predict(Xd)):
-        if p + Q90 > 180 or rsk >= 0.5:
+    band = REG.predict(Xd) + Q90 > 180
+    erk = CLF.predict(Xd) >= OP["t"]
+    fire = (band & erk) if OP["rule"] == "AND" else (band | erk)
+    for (_, row), sv, f in zip(rws.iterrows(), contrib, fire):
+        if f:
             top = __import__("numpy").argsort(-abs(sv))[:3]
             out[str(row["timestamp"])] = [plain.get(FEATS[j], FEATS[j]) for j in top]
     return out
@@ -152,15 +164,18 @@ else:
     r = render(i)
 
 st.divider()
-st.subheader("What-if simulator (frozen model)")
+st.subheader("What-if simulator (frozen model — carbs is the hero intervention)")
+st.caption("Honest limits: raw steps exist for 1/45 patients, so the walk acts "
+           "only via activity/HR and moves less (−4 to −11) than the carb swap "
+           "(−15 to −18). Wearable fusion here = HR + activity kcal.")
 c1, c2 = st.columns(2)
 r = rows.iloc[i]
 x0 = r[FEATS].to_numpy(dtype=float).reshape(1, -1)
 p0 = float(REG.predict(x0)[0])
 if c1.button("🚶 15-min walk", key="walk"):
+    # walk acts through dense wearable signals; raw steps exist for 1/45
+    # patients so steps_* were dropped as a dead feature (see README)
     x = x0.copy()
-    x[0, FEATS.index("steps_30")] += 1500
-    x[0, FEATS.index("steps_60")] += 1500
     x[0, FEATS.index("activity_60")] += 40.0
     x[0, FEATS.index("hr_30")] += 10.0
     st.success(f"Walk: predicted +60 min {p0:.0f} → {float(REG.predict(x)[0]):.0f} mg/dL")
@@ -171,11 +186,15 @@ if c2.button("🍚 Swap rice → ragi (−20 g carbs, IFCT 2017)", key="ragi"):
     st.success(f"Ragi swap: predicted +60 min {p0:.0f} → {float(REG.predict(x)[0]):.0f} mg/dL")
 
 st.divider()
-st.subheader("Triage — patients by current 2-h risk (precomputed replay snapshot)")
+st.subheader("Triage — patients by current 60-min event risk (precomputed replay snapshot)")
 st.dataframe(TRI.head(10), use_container_width=True)
-with st.expander("Proof: ablation + grouped metrics"):
+with st.expander("Proof: ablation + grouped metrics (95% bootstrap-by-subject CIs)"):
     st.dataframe(ABL, use_container_width=True)
-    st.write("LightGBM RMSE@60 25.83 vs persistence 29.73 | "
-             "event AUROC 0.949, AUPRC 0.894 | personalization lift +2.97 "
-             "(14 T2D) | conformal 90% band ±42.0, coverage 0.90.")
+    st.write("Frozen B+wearable-lite RMSE@60 25.66 [23.6, 27.9] vs persistence "
+             "29.73 [27.1, 32.5] (no CI overlap) | event AUROC 0.951, AUPRC 0.895 "
+             "(glucose-only 0.923/0.865 — not just a threshold rule) | T2D-14: "
+             "RMSE 31.17, AUROC 0.954, AUPRC 0.950 | alert AND-rule ≥0.5: "
+             "precision 0.907, recall 0.724, 4.25 false alerts/patient-day, "
+             "median lead 45 min, miss 7.8% | personalization median lift +1.19 "
+             "(+9/−5 of 14 T2D) | conformal 90% band ±37.9, held-out coverage 0.888.")
 st.caption(FOOTER)

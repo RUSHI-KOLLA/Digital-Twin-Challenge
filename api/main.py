@@ -25,8 +25,17 @@ REG = lgb.Booster(model_file="models/lgbm_reg60.txt")
 CLF = lgb.Booster(model_file="models/lgbm_event.txt")
 with open("results/conformal.json") as f:
     Q90 = json.load(f)["q90_half_width"]
+with open("results/operating_point.json") as f:
+    OP = json.load(f)["best"]  # {"rule": "AND", "t": 0.5, ...}
 with open("results/whatif.json") as f:
     WHATIF = json.load(f)
+
+
+def is_alert(pred: float, risk: float) -> bool:
+    band = pred + Q90 > 180
+    if OP["rule"] == "AND":
+        return bool(band and risk >= OP["t"])
+    return bool(band or risk >= OP["t"])
 
 FEAT_CACHE = "data/processed/features.parquet"
 if os.path.exists(FEAT_CACHE):
@@ -58,7 +67,7 @@ def predict_row(row: pd.Series) -> dict:
     x = row[FEATS].to_numpy(dtype=float).reshape(1, -1)
     pred = float(REG.predict(x)[0])
     risk = float(CLF.predict(x)[0])
-    alert = bool(pred + Q90 > 180 or risk >= 0.5)
+    alert = is_alert(pred, risk)
     return {"timestamp": str(row["timestamp"]), "glucose_now": float(row["glucose"]),
             "pred_60": pred, "lo_60": pred - Q90, "hi_60": pred + Q90,
             "risk_event_60": risk, "alert": alert}

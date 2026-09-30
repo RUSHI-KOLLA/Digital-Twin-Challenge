@@ -1,10 +1,17 @@
-"""Phase 2b: LightGBM v1, GroupKFold by patient, monotone carbs+/steps-.
+"""Phase 2b (refreeze v2): LightGBM, GroupKFold by patient, monotone carbs+1.
 
-Features: glucose, slope_15/30, roll mean/std 30/60, carbs 60/120,
-time-since-meal, steps 30/60, hr mean 30, tod sin/cos, dow,
-+ static age/BMI/A1c/fasting (bio.csv; no meds in CGMacros).
+REFREEZE NOTE: ships B+wearable-lite (CGM + meals + HR/activity, 15 feats).
+Ablation B (+meals) scored RMSE 25.49; D (full EHR) 25.83. Dropped from D:
+steps_* (0 for 44/45 patients — dead feature, zero gain) and static EHR
+(no measurable gain at this n, CIs overlap). HR/activity kept so the walk
+what-if moves through learned dense signals; carbs (-15..-18) is the hero
+what-if. Stated openly in README/demo.
 Targets: regress 30/60/120 + event_60 classifier.
-Saves: results/lgbm_metrics.json, models, SHAP png.
+Saves: results/lgbm_metrics.json, results/oof_frozen.parquet, models, SHAP png.
+
+Label note: 0.5% of adjacent 5-min pairs span gaps (sensor dropouts); labels
+and rolling features use positional bins (comparable across all tables).
+time_since_meal uses true timestamps (gap-safe).
 """
 import json
 import os
@@ -26,11 +33,10 @@ FEATS = [
     "glucose", "slope_15", "slope_30",
     "roll_mean_30", "roll_std_30", "roll_mean_60", "roll_std_60",
     "carbs_60", "carbs_120", "time_since_meal",
-    "steps_30", "steps_60", "hr_30", "activity_60",
+    "hr_30", "activity_60",
     "tod_sin", "tod_cos", "dow",
-    "age", "bmi", "a1c", "fasting_glu",
 ]
-# monotone: +1 carbs features, -1 steps features
+# monotone: +1 carbs features (what-if curves move the right way)
 MONO = [1 if f.startswith("carbs_") else (-1 if f.startswith("steps_") else 0)
         for f in FEATS]
 
@@ -52,22 +58,17 @@ def add_features(u: pd.DataFrame) -> pd.DataFrame:
         lambda s: s.rolling(12, min_periods=1).sum())
     u["carbs_120"] = g["meal_carbs"].transform(
         lambda s: s.rolling(24, min_periods=1).sum())
-    # time since meal (min), cap 1440
-    def tsm(s):
-        idx = s.index[s > 0.5]
-        out = pd.Series(1440.0, index=s.index)
-        if len(idx):
-            last = None
-            vals = {}
-            for i in s.index:
-                if i in set(idx):
-                    last = i
-                vals[i] = 0.0 if last is None else (i - last) * 5.0
-            out = pd.Series(vals).clip(0, 1440)
-        return out
-    u["time_since_meal"] = g["meal_carbs"].transform(tsm)
-    u["steps_30"] = g["steps"].transform(lambda s: s.rolling(6, min_periods=1).sum())
-    u["steps_60"] = g["steps"].transform(lambda s: s.rolling(12, min_periods=1).sum())
+    # time since meal (min, true timestamps so gaps don't undercount), cap 1440
+    u["time_since_meal"] = 1440.0
+    for _, grp in u.groupby("patient_id"):
+        ts = grp["timestamp"].to_numpy(dtype="datetime64[m]").astype("int64")
+        mm = ts[grp["meal_carbs"].to_numpy() > 0.5]
+        if len(mm):
+            j = np.searchsorted(mm, ts, side="right") - 1
+            ok = j >= 0
+            vals = np.full(len(grp), 1440.0)
+            vals[ok] = (ts[ok] - mm[j[ok]]).astype(float)
+            u.loc[grp.index, "time_since_meal"] = np.clip(vals, 0, 1440)
     u["hr_30"] = g["hr"].transform(lambda s: s.rolling(6, min_periods=1).mean())
     u["activity_60"] = g["activity_kcal"].transform(
         lambda s: s.rolling(12, min_periods=1).sum())
@@ -126,27 +127,52 @@ def main():
 
     with open("results/metrics.json") as f:
         base = json.load(f)
+    d["t2d"] = d["a1c"] >= 6.5
+    print(f"T2D subset: {d['t2d'].sum()}/{len(d)} rows, "
+          f"{d.loc[d['t2d'], 'patient_id'].nunique()} patients")
+
+    def split_metrics(mask, tag):
+        o = {}
+        for h in H:
+            yt = d.loc[mask, f"target_glucose_{h}"].to_numpy()
+            yp = oof_reg[h][mask.to_numpy()]
+            o[f"{tag}rmse_{h}"] = float(np.sqrt(np.mean((yt - yp) ** 2)))
+            o[f"{tag}mae_{h}"] = float(np.mean(np.abs(yt - yp)))
+        ye = d.loc[mask, "event_60"].to_numpy()
+        pe = oof_clf[mask.to_numpy()]
+        o[f"{tag}event_auroc"] = float(roc_auc_score(ye, pe))
+        o[f"{tag}event_auprc"] = float(average_precision_score(ye, pe))
+        return o
+
     res = {"n_rows": int(len(d)), "features": FEATS,
            "monotone_constraints": MONO}
+    allm = pd.Series(True, index=d.index)
+    res.update(split_metrics(allm, ""))
+    res.update(split_metrics(d["t2d"], "t2d_"))
     for h in H:
-        yt = d[f"target_glucose_{h}"].to_numpy()
-        yp = oof_reg[h]
-        res[f"rmse_{h}"] = float(np.sqrt(np.mean((yt - yp) ** 2)))
-        res[f"mae_{h}"] = float(np.mean(np.abs(yt - yp)))
         res[f"rmse_{h}_persistence"] = base["persistence"][f"rmse_{h}"]
-    res["event_auroc"] = float(roc_auc_score(d["event_60"], oof_clf))
-    res["event_auprc"] = float(average_precision_score(d["event_60"], oof_clf))
     # false alerts per patient-day: alert=prob>=0.5, false=alert & no event
     alert = (oof_clf >= 0.5).astype(int)
     false = ((alert == 1) & (d["event_60"].to_numpy() == 0)).sum()
     patient_days = len(d) / 288.0
     res["false_alerts_per_patient_day"] = float(false / patient_days)
-    print(json.dumps(res, indent=2))
+    print(json.dumps({k: v for k, v in res.items() if k != "features"},
+                     indent=2))
 
     os.makedirs("results", exist_ok=True)
     os.makedirs("models", exist_ok=True)
     with open("results/lgbm_metrics.json", "w") as f:
         json.dump(res, f, indent=2)
+    oof = pd.DataFrame({"patient_id": d["patient_id"].to_numpy(),
+                        "timestamp": d["timestamp"],
+                        "t2d": d["t2d"].to_numpy(),
+                        "event": d["event_60"].to_numpy(),
+                        "escore": oof_clf})
+    for h in H:
+        oof[f"y{h}"] = d[f"target_glucose_{h}"].to_numpy()
+        oof[f"p{h}"] = oof_reg[h]
+    oof.to_parquet("results/oof_frozen.parquet", index=False)
+    print(f"saved results/oof_frozen.parquet rows={len(oof)}")
     # refit on all data for demo/freeze; save 60-min reg + event clf
     r60 = lgb.LGBMRegressor(n_estimators=300, learning_rate=0.05,
                             num_leaves=31, min_child_samples=50,
