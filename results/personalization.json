@@ -1,0 +1,104 @@
+{
+  "patients": [
+    {
+      "patient_id": 3.0,
+      "n_second": 1453,
+      "rmse_cohort": 27.49048156462047,
+      "rmse_personal": 19.912845451699706,
+      "lift": 7.577636112920764
+    },
+    {
+      "patient_id": 5.0,
+      "n_second": 1441,
+      "rmse_cohort": 29.11467157367547,
+      "rmse_personal": 19.97694314755992,
+      "lift": 9.137728426115551
+    },
+    {
+      "patient_id": 12.0,
+      "n_second": 1462,
+      "rmse_cohort": 29.896702443737666,
+      "rmse_personal": 22.084154802907715,
+      "lift": 7.812547640829951
+    },
+    {
+      "patient_id": 14.0,
+      "n_second": 1720,
+      "rmse_cohort": 22.881764807813777,
+      "rmse_personal": 19.929375684827917,
+      "lift": 2.95238912298586
+    },
+    {
+      "patient_id": 28.0,
+      "n_second": 1868,
+      "rmse_cohort": 19.021705566511624,
+      "rmse_personal": 18.369113519873547,
+      "lift": 0.6525920466380768
+    },
+    {
+      "patient_id": 30.0,
+      "n_second": 1541,
+      "rmse_cohort": 36.89493967302102,
+      "rmse_personal": 37.87662609484294,
+      "lift": -0.9816864218219195
+    },
+    {
+      "patient_id": 35.0,
+      "n_second": 1435,
+      "rmse_cohort": 37.18531122219424,
+      "rmse_personal": 35.12981045480368,
+      "lift": 2.055500767390555
+    },
+    {
+      "patient_id": 36.0,
+      "n_second": 1706,
+      "rmse_cohort": 31.796826090477598,
+      "rmse_personal": 34.26877954552339,
+      "lift": -2.4719534550457887
+    },
+    {
+      "patient_id": 38.0,
+      "n_second": 1445,
+      "rmse_cohort": 27.903599719017933,
+      "rmse_personal": 24.889486910676716,
+      "lift": 3.014112808341217
+    },
+    {
+      "patient_id": 39.0,
+      "n_second": 1715,
+      "rmse_cohort": 36.044869696109444,
+      "rmse_personal": 37.039139264516784,
+      "lift": -0.9942695684073399
+    },
+    {
+      "patient_id": 42.0,
+      "n_second": 1446,
+      "rmse_cohort": 26.970497090888596,
+      "rmse_personal": 25.248361452988707,
+      "lift": 1.722135637899889
+    },
+    {
+      "patient_id": 46.0,
+      "n_second": 1463,
+      "rmse_cohort": 37.70249605439373,
+      "rmse_personal": 32.2654516576764,
+      "lift": 5.437044396717326
+    },
+    {
+      "patient_id": 47.0,
+      "n_second": 1564,
+      "rmse_cohort": 32.65708608511554,
+      "rmse_personal": 27.87444547457185,
+      "lift": 4.782640610543687
+    },
+    {
+      "patient_id": 49.0,
+      "n_second": 1526,
+      "rmse_cohort": 33.94905207278852,
+      "rmse_personal": 32.99814079692262,
+      "lift": 0.9509112758658986
+    }
+  ],
+  "mean_lift": 2.9748092429266952,
+  "n": 14
+}
