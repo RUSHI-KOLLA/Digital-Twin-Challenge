@@ -40,10 +40,10 @@ class TestHeadlines(unittest.TestCase):
     def test_operating_point(self):
         op = load("operating_point.json")["best"]
         self.assertEqual(op["rule"], "AND")
-        self.assertEqual(op["t"], 0.7)
-        self.assertGreaterEqual(op["precision"], 0.95)
-        self.assertLessEqual(op["false_alerts_pd"], 2.0)
-        self.assertGreaterEqual(op["median_lead_min"], 10)
+        self.assertEqual(op["t"], 0.5)
+        self.assertLessEqual(op["false_alerts_pd"], 5.0)
+        self.assertGreaterEqual(op["median_lead_min"], 20)
+        self.assertLessEqual(op["miss_rate"], 0.15)
 
     def test_demo_window(self):
         demo = load("demo_window.json")

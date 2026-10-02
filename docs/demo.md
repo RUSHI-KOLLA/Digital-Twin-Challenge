@@ -20,8 +20,8 @@ One command: `docker compose up` → dashboard http://localhost:8501, API http:/
    overlap B — no measurable gain at this n, not "fusion hurts"), grouped
    metrics (RMSE@60 25.66 [23.6, 27.9] vs persistence 29.73; T2D-14: 31.17
    vs T2D persistence 36.34; AUROC 0.951 vs glucose-only 0.923 — not just a
-   threshold rule), personalization median +1.19 (+9/−5 shown), clinical
-   alert (AND t=0.7): precision 0.964, 1.42 false alerts/day, median lead
-   15 min, miss 28%.
+   threshold rule), personalization median +1.19 (+9/−5 shown), alert
+   default (AND t=0.5): precision 0.907, 4.25 false alerts/day, median lead
+   25 min, miss 10% (t=0.7 alternative: 0.964/1.42/day, miss 28%).
 6. **Responsible AI, 30 s:** advisory only, clinician-in-the-loop, never
    automates insulin delivery. No open Indian CGM data exists — composites labeled.
