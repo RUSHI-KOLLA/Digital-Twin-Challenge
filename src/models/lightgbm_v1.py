@@ -35,6 +35,9 @@ FEATS = [
     "carbs_60", "carbs_120", "time_since_meal",
     "hr_30", "activity_60",
     "tod_sin", "tod_cos", "dow",
+    # v3 Tier-1 additions (all past-only; MONO 0 except carbs_+1)
+    "fat_60", "fat_120", "protein_60", "protein_120",
+    "glucose_accel", "glucose_z", "hr_vs_baseline", "pm_rise_baseline",
 ]
 # monotone: +1 carbs features (what-if curves move the right way)
 MONO = [1 if f.startswith("carbs_") else (-1 if f.startswith("steps_") else 0)
@@ -72,6 +75,46 @@ def add_features(u: pd.DataFrame) -> pd.DataFrame:
     u["hr_30"] = g["hr"].transform(lambda s: s.rolling(6, min_periods=1).mean())
     u["activity_60"] = g["activity_kcal"].transform(
         lambda s: s.rolling(12, min_periods=1).sum())
+    # --- v3 Tier-1: meal composition (rolling sums, past-only like carbs) ---
+    u["fat_60"] = g["meal_fat"].transform(
+        lambda s: s.rolling(12, min_periods=1).sum())
+    u["fat_120"] = g["meal_fat"].transform(
+        lambda s: s.rolling(24, min_periods=1).sum())
+    u["protein_60"] = g["meal_protein"].transform(
+        lambda s: s.rolling(12, min_periods=1).sum())
+    u["protein_120"] = g["meal_protein"].transform(
+        lambda s: s.rolling(24, min_periods=1).sum())
+    # --- v3 Tier-1: glucose acceleration (2nd derivative, within-group shift) ---
+    # NaN on warmup; LightGBM handles NaN natively (no imputation = no leakage)
+    u["glucose_accel"] = (u["slope_15"] -
+                          u.groupby("patient_id")["slope_15"].shift(1))
+    # --- v3 Tier-1: per-patient baselines, EXPANDING (past+current only) ---
+    # No future rows anywhere: expanding() at row t sees rows <= t only.
+    # (Including the current row in its own baseline is standard and uses
+    # no future data — same as slope features using current glucose.)
+    for _, grp in u.groupby("patient_id"):
+        gv = grp["glucose"].to_numpy(dtype=float)
+        s = pd.Series(gv)
+        mu = s.expanding().mean().to_numpy().copy()
+        sd = s.expanding().std().to_numpy().copy()
+        sd[sd < 1e-9] = np.nan  # constant run-in -> NaN, never inf
+        with np.errstate(invalid="ignore", divide="ignore"):
+            z = (gv - mu) / sd
+        z[~np.isfinite(z)] = np.nan
+        u.loc[grp.index, "glucose_z"] = z
+        hr = grp["hr"].to_numpy(dtype=float)
+        hrm = pd.Series(hr).expanding().mean().to_numpy()
+        u.loc[grp.index, "hr_vs_baseline"] = grp["hr_30"].to_numpy() - hrm
+        # post-meal rise baseline: delta_tau = g[tau]-g[tau+12] at past meals,
+        # usable only once both endpoints are recorded (tau+12 <= t).
+        mc = grp["meal_carbs"].to_numpy()
+        n = len(grp)
+        delta = np.full(n, np.nan)
+        if n > 12:
+            meals = np.where(mc[:-12] > 0.5)[0]
+            delta[meals] = gv[meals] - gv[meals + 12]
+        med = pd.Series(delta).expanding().median().shift(12).to_numpy()
+        u.loc[grp.index, "pm_rise_baseline"] = med
     hod = u["timestamp"].dt.hour + u["timestamp"].dt.minute / 60.0
     u["tod_sin"] = np.sin(2 * np.pi * hod / 24.0)
     u["tod_cos"] = np.cos(2 * np.pi * hod / 24.0)
@@ -96,7 +139,19 @@ def add_static(u: pd.DataFrame) -> pd.DataFrame:
     return u
 
 
-def main():
+def main(tag=None):
+    """tag=None writes the legacy v2 paths. Any tag (e.g. 'v3') redirects
+    ALL outputs to tagged paths so frozen v2 artifacts are never touched."""
+    suf = "" if tag is None else f"_{tag}"
+    paths = {
+        "metrics": f"results/lgbm_metrics{suf}.json",
+        "oof": f"results/oof_{'frozen' if tag is None else tag}.parquet",
+        "reg": f"models/lgbm_reg60{suf}.txt",
+        "clf": f"models/lgbm_event{suf}.txt",
+        "shap": f"results/shap_summary{suf}.png",
+    }
+    if tag is not None:
+        print(f"tag={tag} -> {paths}")
     u = pd.read_parquet(IN)
     u["timestamp"] = pd.to_datetime(u["timestamp"])
     u = add_features(u)
@@ -161,7 +216,7 @@ def main():
 
     os.makedirs("results", exist_ok=True)
     os.makedirs("models", exist_ok=True)
-    with open("results/lgbm_metrics.json", "w") as f:
+    with open(paths["metrics"], "w") as f:
         json.dump(res, f, indent=2)
     oof = pd.DataFrame({"patient_id": d["patient_id"].to_numpy(),
                         "timestamp": d["timestamp"],
@@ -171,19 +226,19 @@ def main():
     for h in H:
         oof[f"y{h}"] = d[f"target_glucose_{h}"].to_numpy()
         oof[f"p{h}"] = oof_reg[h]
-    oof.to_parquet("results/oof_frozen.parquet", index=False)
-    print(f"saved results/oof_frozen.parquet rows={len(oof)}")
+    oof.to_parquet(paths["oof"], index=False)
+    print(f"saved {paths['oof']} rows={len(oof)}")
     # refit on all data for demo/freeze; save 60-min reg + event clf
     r60 = lgb.LGBMRegressor(n_estimators=300, learning_rate=0.05,
                             num_leaves=31, min_child_samples=50,
                             monotone_constraints=MONO, verbose=-1)
     r60.fit(X, d["target_glucose_60"].to_numpy())
-    r60.booster_.save_model("models/lgbm_reg60.txt")
+    r60.booster_.save_model(paths["reg"])
     clf = lgb.LGBMClassifier(n_estimators=300, learning_rate=0.05,
                              num_leaves=31, min_child_samples=100,
                              monotone_constraints=MONO, verbose=-1)
     clf.fit(X, d["event_60"].to_numpy())
-    clf.booster_.save_model("models/lgbm_event.txt")
+    clf.booster_.save_model(paths["clf"])
     # SHAP summary (reg60, sample 2000)
     import shap
     sample = X[np.random.RandomState(0).choice(len(X), min(2000, len(X)),
@@ -194,11 +249,14 @@ def main():
     plt.figure()
     shap.summary_plot(sv, sample, feature_names=FEATS, show=False)
     plt.tight_layout()
-    plt.savefig("results/shap_summary.png", dpi=120)
+    plt.savefig(paths["shap"], dpi=120)
     plt.close()
-    print("saved models/lgbm_reg60.txt models/lgbm_event.txt "
-          "results/shap_summary.png")
+    print(f"saved {paths['reg']} {paths['clf']} {paths['shap']}")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tag", default=None,
+                    help="redirect all outputs to tagged paths (v2-safe)")
+    main(**vars(ap.parse_args()))

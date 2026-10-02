@@ -18,10 +18,17 @@ SEED = 0
 Q90 = json.load(open("results/conformal.json"))["q90_half_width"]
 
 
-def load_oof():
-    out = {"frozen": pd.read_parquet("results/oof_frozen.parquet")}
-    for v in ["A_cgm", "B_meals", "C_wearable", "D_ehr"]:
-        out[v] = pd.read_parquet(f"results/oof_ablation_{v}.parquet")
+def load_oof(tag=None):
+    """tag=None loads the legacy v2 OOFs. Any tag loads ONLY oof_{tag}
+    (v2 files never touched). Returns (oof_dict, model_key)."""
+    if tag is None:
+        out = {"frozen": pd.read_parquet("results/oof_frozen.parquet")}
+        for v in ["A_cgm", "B_meals", "C_wearable", "D_ehr"]:
+            out[v] = pd.read_parquet(f"results/oof_ablation_{v}.parquet")
+        key = "frozen"
+    else:
+        out = {tag: pd.read_parquet(f"results/oof_{tag}.parquet")}
+        key = tag
     u = pd.read_parquet("data/processed/unified.parquet")
     u["timestamp"] = pd.to_datetime(u["timestamp"])
     for k, df in out.items():
@@ -30,7 +37,7 @@ def load_oof():
                      on=["patient_id", "timestamp"], how="left", validate="many_to_one")
         assert m["glucose"].notna().all(), f"glucose merge failed for {k}"
         out[k] = m
-    return out
+    return out, key
 
 
 def boot_metric(pids, df, fn, rng):
@@ -92,9 +99,13 @@ def lead_stats(df, alert_col):
             float(missed / total) if total else 1.0, total)
 
 
-def main():
-    oof = load_oof()
-    fr = oof["frozen"]
+def main(tag=None):
+    """tag=None reproduces the legacy v2 artifacts. Any tag writes
+    metrics_ci_{tag}.json + operating_point_{tag}.json from oof_{tag}
+    and never touches v2 files."""
+    suf = "" if tag is None else f"_{tag}"
+    oof, key = load_oof(tag)
+    fr = oof[key]
     pids = np.array(sorted(fr["patient_id"].unique()))
     rng = np.random.RandomState(SEED)
     ci = {}
@@ -125,15 +136,15 @@ def main():
     pg, rg, fg = pr_at(fr, lambda s: (s["glucose"] > 150).astype(int).to_numpy())
     ci["glucose_baseline"].update(
         {"rule": "glucose>150", "precision": pg, "recall": rg, "f1": fg})
-    # T2D-split CIs for the frozen model
+    # T2D-split CIs for the evaluated model
     t2d = fr[fr["t2d"]]
     tpids = np.array(sorted(t2d["patient_id"].unique()))
-    ci["frozen_t2d"] = {"rmse_60_ci": boot_metric(tpids, t2d, rmse60, rng),
+    ci[f"{key}_t2d"] = {"rmse_60_ci": boot_metric(tpids, t2d, rmse60, rng),
                         "auroc_ci": boot_metric(tpids, t2d, auroc, rng),
                         "auprc_ci": boot_metric(tpids, t2d, auprc, rng),
                         "rmse_60": rmse60(t2d), "auroc": auroc(t2d),
                         "auprc": auprc(t2d), "n_patients": int(len(tpids))}
-    with open("results/metrics_ci.json", "w") as f:
+    with open(f"results/metrics_ci{suf}.json", "w") as f:
         json.dump(ci, f, indent=2)
     print(json.dumps({k: {kk: (round(vv, 3) if isinstance(vv, float) else vv)
                           for kk, vv in v.items()} for k, v in ci.items()},
@@ -160,19 +171,30 @@ def main():
                          "median_lead_min": round(med_lead, 1),
                          "miss_rate": round(miss, 3), "n_crossings": n_cross})
     rows = sorted(rows, key=lambda r: (-r["f1"], r["false_alerts_pd"]))
-    # Clinical default: AND rule at t=0.7 (precision-first). Max-F1 kept for ref.
-    and_rows = [r for r in rows if r["rule"] == "AND"]
-    clinical = next(r for r in and_rows if r["t"] == 0.7)
-    maxf1 = rows[0]
-    op = {"best": clinical, "max_f1": maxf1, "all": rows,
-          "note": "best = clinical default (AND, t=0.7, precision-first); "
-                  "max_f1 = highest-F1 point for reference; alert per 5-min bin"}
-    with open("results/operating_point.json", "w") as f:
+    # Default = miss-minimising: lowest miss rate subject to
+    # false_alerts_pd <= 5.0 on the AND rule (a missed excursion harms more
+    # than a false alarm). t=0.7 kept as the precision-first alternative.
+    and_ok = [r for r in rows
+              if r["rule"] == "AND" and r["false_alerts_pd"] <= 5.0]
+    assert and_ok, "no AND operating point within the false-alert budget"
+    best = min(and_ok, key=lambda r: (r["miss_rate"], r["false_alerts_pd"]))
+    op = {"best": best,
+          "precision_first": next(r for r in rows
+                                  if r["rule"] == "AND" and r["t"] == 0.7),
+          "all": rows,
+          "note": "best = miss-minimising default (lowest miss rate with "
+                  "false_alerts_pd<=5.0 on the AND rule); precision_first "
+                  "(t=0.7) kept as the low-fatigue alternative; alert "
+                  "evaluated per 5-min bin"}
+    with open(f"results/operating_point{suf}.json", "w") as f:
         json.dump(op, f, indent=2)
-    print("CLINICAL:", json.dumps(clinical, indent=2))
-    print("MAX_F1:", json.dumps(maxf1, indent=2))
-    print("saved results/metrics_ci.json + results/operating_point.json")
+    print("BEST:", json.dumps(best, indent=2))
+    print(f"saved results/metrics_ci{suf}.json + results/operating_point{suf}.json")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tag", default=None,
+                    help="evaluate oof_{tag}; writes tagged outputs (v2-safe)")
+    main(**vars(ap.parse_args()))

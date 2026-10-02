@@ -43,7 +43,21 @@ Alert operating point — default minimises missed excursions subject to
 excursion harms more than a false alarm): precision 0.907, recall 0.724,
 4.25 false alerts/patient-day, median lead 25 min over 923 crossings, miss
 rate 10%. Precision-first alternative (t=0.7): 0.964, 1.42/day, lead 15 min,
-miss 28% — full trade-off curve in `results/operating_point.json`. Personalization: median lift +1.19
+miss 28% — full trade-off curve in `results/operating_point.json`.
+Event head calibration (isotonic, fit on 22 patients, held out 23): Brier
+0.045 → 0.046 — no gain, so calibration is NOT wired into serving; the head
+ships raw with slope 1.07 / intercept −0.39 reported. Clarke Error Grid on
+the +60 forecast: A 80.0%, B 18.4% (A+B 98.5%), D 1.5%, E 0.0%.
+
+## Generalisation (external cohort, zero refit)
+
+Frozen v2 on ShanghaiT2DM (Zhao et al., Sci Data 2023, CC-BY; n=100 T2D,
+15-min CGM upsampled to 5 min): RMSE@60 46.44 [43.3, 49.5] (drop +20.8 vs
+CGMacros), event AUROC 0.853 [0.830, 0.872] (drop 0.098). Honest read: this
+is a CGM-only cohort — meals and HR are absent, so the model's meal features
+are zeroed and post-meal spikes are unforecastable there. Discrimination
+survives (0.853); level accuracy does not. Prospective validation remains
+future work. Personalization: median lift +1.19
 RMSE (+9/−5 of 14 T2D — negatives shown). Conformal 90% band ±37.9, held-out
 patient coverage 0.888 (50% band ±10.4, coverage 0.458).
 

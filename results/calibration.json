@@ -1,0 +1,11 @@
+{
+  "brier_before": 0.045306862090384634,
+  "brier_after": 0.04591974797493964,
+  "slope": 1.069183741265353,
+  "intercept": -0.38642244825192373,
+  "precision_before": 0.8682365392247652,
+  "precision_after": 0.8774767488879903,
+  "n_fit_patients": 22,
+  "n_eval_patients": 23,
+  "method": "isotonic fit on 50% patients, evaluated on held-out 50%"
+}
