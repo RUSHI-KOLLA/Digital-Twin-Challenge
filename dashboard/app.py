@@ -27,7 +27,10 @@ FOOTER = ("Synthetic composite patient / open data — no open Indian CGM data "
 
 @st.cache_resource
 def load_all():
-    with open("data/synthetic/personas.json") as f:
+    import yaml
+    with open("configs/model.yaml") as f:
+        cfg = yaml.safe_load(f)
+    with open(cfg["personas"]) as f:
         personas = json.load(f)["personas"]
     feat = "data/processed/features.parquet"
     try:
@@ -39,13 +42,13 @@ def load_all():
         d = add_static(add_features(u))
         d.to_parquet(feat, index=False)
     d["timestamp"] = pd.to_datetime(d["timestamp"])
-    reg = lgb.Booster(model_file="models/lgbm_reg60.txt")
-    clf = lgb.Booster(model_file="models/lgbm_event.txt")
-    with open("results/conformal.json") as f:
+    reg = lgb.Booster(model_file=cfg["reg_model"])
+    clf = lgb.Booster(model_file=cfg["clf_model"])
+    with open(cfg["conformal"]) as f:
         q90 = json.load(f)["q90_half_width"]
-    with open("results/operating_point.json") as f:
-        op = json.load(f)["best"]  # tuned AND rule: band AND risk>=t
-    with open("results/demo_window.json") as f:
+    with open(cfg["operating_point"]) as f:
+        op = json.load(f)["best"]  # clinical default (AND, t=0.7)
+    with open(cfg["demo_window"]) as f:
         demo = json.load(f)
     tri = pd.read_csv("results/triage.csv")
     abl = pd.read_csv("results/ablation.csv")
@@ -164,26 +167,28 @@ else:
     r = render(i)
 
 st.divider()
-st.subheader("What-if simulator (frozen model — carbs is the hero intervention)")
-st.caption("Honest limits: raw steps exist for 1/45 patients, so the walk acts "
-           "only via activity/HR and moves less (−4 to −11) than the carb swap "
-           "(−15 to −18). Wearable fusion here = HR + activity kcal.")
+st.subheader("What-if simulator (frozen model)")
+st.caption("Two levers, both lower the predicted peak. Honest limits: raw steps "
+           "exist for 1/45 patients, so the walk acts only via activity/HR. "
+           "The carb swap (rice→ragi, IFCT 2017) is the culturally relevant "
+           "lever for the Indian phenotype; the walk is the acute lever. "
+           "Effects vary by state — read the numbers, don't rank them.")
 c1, c2 = st.columns(2)
 r = rows.iloc[i]
 x0 = r[FEATS].to_numpy(dtype=float).reshape(1, -1)
 p0 = float(REG.predict(x0)[0])
-if c1.button("🚶 15-min walk", key="walk"):
+if c1.button("🍚 Swap rice → ragi (−20 g carbs, IFCT 2017)", key="ragi"):
+    x = x0.copy()
+    x[0, FEATS.index("carbs_60")] = max(0.0, x[0, FEATS.index("carbs_60")] - 20.0)
+    x[0, FEATS.index("carbs_120")] = max(0.0, x[0, FEATS.index("carbs_120")] - 20.0)
+    st.success(f"Ragi swap: predicted +60 min {p0:.0f} → {float(REG.predict(x)[0]):.0f} mg/dL")
+if c2.button("🚶 15-min walk", key="walk"):
     # walk acts through dense wearable signals; raw steps exist for 1/45
     # patients so steps_* were dropped as a dead feature (see README)
     x = x0.copy()
     x[0, FEATS.index("activity_60")] += 40.0
     x[0, FEATS.index("hr_30")] += 10.0
     st.success(f"Walk: predicted +60 min {p0:.0f} → {float(REG.predict(x)[0]):.0f} mg/dL")
-if c2.button("🍚 Swap rice → ragi (−20 g carbs, IFCT 2017)", key="ragi"):
-    x = x0.copy()
-    x[0, FEATS.index("carbs_60")] = max(0.0, x[0, FEATS.index("carbs_60")] - 20.0)
-    x[0, FEATS.index("carbs_120")] = max(0.0, x[0, FEATS.index("carbs_120")] - 20.0)
-    st.success(f"Ragi swap: predicted +60 min {p0:.0f} → {float(REG.predict(x)[0]):.0f} mg/dL")
 
 st.divider()
 st.subheader("Triage — patients by current 60-min event risk (precomputed replay snapshot)")
@@ -193,8 +198,9 @@ with st.expander("Proof: ablation + grouped metrics (95% bootstrap-by-subject CI
     st.write("Frozen B+wearable-lite RMSE@60 25.66 [23.6, 27.9] vs persistence "
              "29.73 [27.1, 32.5] (no CI overlap) | event AUROC 0.951, AUPRC 0.895 "
              "(glucose-only 0.923/0.865 — not just a threshold rule) | T2D-14: "
-             "RMSE 31.17, AUROC 0.954, AUPRC 0.950 | alert AND-rule ≥0.5: "
-             "precision 0.907, recall 0.724, 4.25 false alerts/patient-day, "
-             "median lead 45 min, miss 7.8% | personalization median lift +1.19 "
+             "RMSE 31.17 [27.5, 34.4] vs T2D persistence 36.34 [32.9, 39.9], "
+             "AUROC 0.954, AUPRC 0.950 | clinical alert (AND, t=0.7): precision "
+             "0.964, recall 0.669, 1.42 false alerts/patient-day, median lead "
+             "15 min, miss 28% | personalization median lift +1.19 "
              "(+9/−5 of 14 T2D) | conformal 90% band ±37.9, held-out coverage 0.888.")
 st.caption(FOOTER)

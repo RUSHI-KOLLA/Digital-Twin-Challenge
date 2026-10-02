@@ -9,16 +9,18 @@ of truth.
 
 ![Architecture](docs/architecture.png)
 
-## One-command run (frozen model)
+![Demo](docs/demo.gif)
+
+## One-command run (offline, frozen model)
 
 ```
 docker compose up
 ```
 Dashboard → http://localhost:8501, replay API → http://localhost:8000.
-On a fresh clone the entrypoint downloads open CGMacros (~627 MB, no login)
-and rebuilds processed data automatically. Hero replay: Ramesh, 2025-02-16 —
-alert at 12:05 (glucose 153, risk 82%), spike 30 min later. Demo script:
-`docs/demo.md`.
+Processed data ships in the image (no download needed); the entrypoint
+rebuilds from open CGMacros only if it's ever missing. Hero replay: Ramesh,
+2025-02-16 — alert at 12:05 (glucose 153, risk 82%), spike 30 min later.
+Demo script: `docs/demo.md`.
 
 ## Metrics (patient-wise GroupKFold, n=45; 95% bootstrap-by-subject CIs)
 
@@ -27,7 +29,8 @@ alert at 12:05 (glucose 153, risk 82%), spike 30 min later. Demo script:
 | Persistence | 29.73 [27.1, 32.5] | — | — |
 | Glucose-only (event) | — | 0.923 [0.898, 0.943] | 0.865 |
 | LightGBM frozen (B+wearable-lite) | **25.66 [23.6, 27.9]** | **0.951 [0.937, 0.962]** | **0.895** |
-| T2D subset (n=14) | 31.17 [27.5, 34.6] | 0.954 | 0.950 |
+| T2D subset (n=14) | 31.17 [27.5, 34.4] | 0.954 | 0.950 |
+| T2D persistence (n=14) | 36.34 [32.9, 39.9] | — | — |
 
 Regression also beats persistence at +30 (17.54 vs 20.18) and +120 (32.99 vs 40.20).
 Ablation RMSE@60: A CGM 26.83 → B +meals 25.46 → C +wearable 25.67 → D +EHR
@@ -35,18 +38,20 @@ Ablation RMSE@60: A CGM 26.83 → B +meals 25.46 → C +wearable 25.67 → D +EH
 (honest small-n read, not "fusion hurts"). Frozen = B + HR/activity (dead
 steps_* and flat static dropped; CIs overlap B).
 
-Alert operating point (tuned, AND rule: band-cross AND risk≥0.5): precision
-0.907, recall 0.724, 4.25 false alerts/patient-day, median lead 45 min over
-923 crossings, miss rate 7.8%. Personalization: median lift +1.19 RMSE
-(+9/−5 of 14 T2D — negatives shown). Conformal 90% band ±37.9, held-out
+Alert operating point — clinical default (AND rule: band-cross AND risk≥0.7,
+precision-first): precision 0.964, recall 0.669, 1.42 false alerts/patient-day,
+median lead 15 min over 923 crossings, miss rate 28%. Max-F1 point (t=0.5):
+precision 0.907, recall 0.724, 4.25/day, lead 25 min, miss 10% — full trade-off
+curve in `results/operating_point.json`. Personalization: median lift +1.19
+RMSE (+9/−5 of 14 T2D — negatives shown). Conformal 90% band ±37.9, held-out
 patient coverage 0.888 (50% band ±10.4, coverage 0.458).
 
 ## Honest limits (say it ourselves)
 
 - Raw steps exist for 1/45 patients → steps features were dead weight and
-  dropped. Wearable fusion here = heart rate + activity kcal. The walk
-  what-if moves less (−4 to −11) than the carb swap (−15 to −18):
-  **carbs is the hero intervention**.
+  dropped. Wearable fusion here = heart rate + activity kcal. The walk and
+  carb-swap what-ifs both lower the predicted peak; their relative size
+  varies by state, so the UI shows both numbers and doesn't rank them.
 - No open Indian CGM data exists — patients are labeled synthetic composites
   (Synthea history + real open trajectory), badged on every screen.
 

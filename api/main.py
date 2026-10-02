@@ -21,13 +21,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "models"
 from lightgbm_v1 import FEATS, add_features, add_static  # noqa: E402
 
 app = FastAPI(title="GlucoTwin replay API")
-REG = lgb.Booster(model_file="models/lgbm_reg60.txt")
-CLF = lgb.Booster(model_file="models/lgbm_event.txt")
-with open("results/conformal.json") as f:
+import yaml
+with open("configs/model.yaml") as f:
+    CFG = yaml.safe_load(f)
+REG = lgb.Booster(model_file=CFG["reg_model"])
+CLF = lgb.Booster(model_file=CFG["clf_model"])
+with open(CFG["conformal"]) as f:
     Q90 = json.load(f)["q90_half_width"]
-with open("results/operating_point.json") as f:
-    OP = json.load(f)["best"]  # {"rule": "AND", "t": 0.5, ...}
-with open("results/whatif.json") as f:
+with open(CFG["operating_point"]) as f:
+    OP = json.load(f)["best"]  # clinical default (AND, t=0.7)
+with open(CFG["demo_window"]) as f:
     WHATIF = json.load(f)
 
 
