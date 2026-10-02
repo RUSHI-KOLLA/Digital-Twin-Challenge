@@ -160,17 +160,24 @@ def main():
                          "median_lead_min": round(med_lead, 1),
                          "miss_rate": round(miss, 3), "n_crossings": n_cross})
     rows = sorted(rows, key=lambda r: (-r["f1"], r["false_alerts_pd"]))
-    # Clinical default: AND rule at t=0.7 (precision-first). Max-F1 kept for ref.
-    and_rows = [r for r in rows if r["rule"] == "AND"]
-    clinical = next(r for r in and_rows if r["t"] == 0.7)
-    maxf1 = rows[0]
-    op = {"best": clinical, "max_f1": maxf1, "all": rows,
-          "note": "best = clinical default (AND, t=0.7, precision-first); "
-                  "max_f1 = highest-F1 point for reference; alert per 5-min bin"}
+    # Clinical default: miss-minimising AND rule — lowest miss rate subject
+    # to false_alerts_pd <= 5.0 (a missed excursion harms more than a false
+    # alarm). t=0.7 precision-first kept as the documented alternative.
+    and_ok = [r for r in rows
+              if r["rule"] == "AND" and r["false_alerts_pd"] <= 5.0]
+    assert and_ok, "no AND operating point within the false-alert budget"
+    best = min(and_ok, key=lambda r: (r["miss_rate"], r["false_alerts_pd"]))
+    precision_first = next(r for r in rows
+                           if r["rule"] == "AND" and r["t"] == 0.7)
+    op = {"best": best, "all": rows, "precision_first": precision_first,
+          "note": "best = miss-minimising default: lowest miss rate subject "
+                  "to false_alerts_pd<=5.0 (a missed excursion harms more "
+                  "than a false alarm); precision_first (t=0.7) kept as the "
+                  "low-fatigue alternative; alert evaluated per 5-min bin"}
     with open("results/operating_point.json", "w") as f:
         json.dump(op, f, indent=2)
-    print("CLINICAL:", json.dumps(clinical, indent=2))
-    print("MAX_F1:", json.dumps(maxf1, indent=2))
+    print("BEST:", json.dumps(best, indent=2))
+    print("PRECISION_FIRST:", json.dumps(precision_first, indent=2))
     print("saved results/metrics_ci.json + results/operating_point.json")
 
 

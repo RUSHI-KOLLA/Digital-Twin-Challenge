@@ -27,7 +27,7 @@ Demo script: `docs/demo.md`.
 | Model | RMSE@60 [95% CI] | Event AUROC | Event AUPRC |
 |---|---|---|---|
 | Persistence | 29.73 [27.1, 32.5] | — | — |
-| Glucose-only (event) | — | 0.923 [0.898, 0.943] | 0.865 |
+| Glucose-only (event) | — | 0.923 [0.896, 0.943] | 0.865 |
 | LightGBM frozen (B+wearable-lite) | **25.66 [23.6, 27.9]** | **0.951 [0.937, 0.962]** | **0.895** |
 | T2D subset (n=14) | 31.17 [27.5, 34.4] | 0.954 | 0.950 |
 | T2D persistence (n=14) | 36.34 [32.9, 39.9] | — | — |
@@ -38,13 +38,16 @@ Ablation RMSE@60: A CGM 26.83 → B +meals 25.46 → C +wearable 25.67 → D +EH
 (honest small-n read, not "fusion hurts"). Frozen = B + HR/activity (dead
 steps_* and flat static dropped; CIs overlap B).
 
-Alert operating point — clinical default (AND rule: band-cross AND risk≥0.7,
-precision-first): precision 0.964, recall 0.669, 1.42 false alerts/patient-day,
-median lead 15 min over 923 crossings, miss rate 28%. Max-F1 point (t=0.5):
-precision 0.907, recall 0.724, 4.25/day, lead 25 min, miss 10% — full trade-off
-curve in `results/operating_point.json`. Personalization: median lift +1.19
-RMSE (+9/−5 of 14 T2D — negatives shown). Conformal 90% band ±37.9, held-out
-patient coverage 0.888 (50% band ±10.4, coverage 0.458).
+Alert operating point — default minimises missed excursions subject to
+≤5 false alerts/patient-day (AND rule: band-cross AND risk≥0.5; a missed
+excursion harms more than a false alarm): precision 0.907, recall 0.724,
+4.25 false alerts/patient-day, median lead 25 min over 923 crossings, miss
+rate 10%. Precision-first alternative (t=0.7): 0.964, 1.42/day, lead 15 min,
+miss 28% — full trade-off curve in `results/operating_point.json`.
+
+Personalization: median lift +1.19 RMSE (+9/−5 of 14 T2D — negatives
+shown). Conformal 90% band ±37.9, held-out patient coverage 0.888 (50% band
+±10.4, coverage 0.458).
 
 ## Honest limits (say it ourselves)
 

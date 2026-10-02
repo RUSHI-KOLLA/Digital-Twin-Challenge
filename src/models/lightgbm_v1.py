@@ -1,11 +1,11 @@
 """Phase 2b (refreeze v2): LightGBM, GroupKFold by patient, monotone carbs+1.
 
 REFREEZE NOTE: ships B+wearable-lite (CGM + meals + HR/activity, 15 feats).
-Ablation B (+meals) scored RMSE 25.49; D (full EHR) 25.83. Dropped from D:
+Ablation B (+meals) scored RMSE 25.46; D (full EHR) 25.74. Dropped from D:
 steps_* (0 for 44/45 patients — dead feature, zero gain) and static EHR
 (no measurable gain at this n, CIs overlap). HR/activity kept so the walk
-what-if moves through learned dense signals; carbs (-15..-18) is the hero
-what-if. Stated openly in README/demo.
+what-if moves through learned dense signals. The walk vs carb-swap
+what-if relative size varies by state; the UI shows both and ranks neither.
 Targets: regress 30/60/120 + event_60 classifier.
 Saves: results/lgbm_metrics.json, results/oof_frozen.parquet, models, SHAP png.
 

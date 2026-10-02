@@ -29,7 +29,7 @@ CLF = lgb.Booster(model_file=CFG["clf_model"])
 with open(CFG["conformal"]) as f:
     Q90 = json.load(f)["q90_half_width"]
 with open(CFG["operating_point"]) as f:
-    OP = json.load(f)["best"]  # clinical default (AND, t=0.7)
+    OP = json.load(f)["best"]  # miss-minimising default (see operating_point.json)
 with open(CFG["demo_window"]) as f:
     WHATIF = json.load(f)
 

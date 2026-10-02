@@ -47,7 +47,7 @@ def load_all():
     with open(cfg["conformal"]) as f:
         q90 = json.load(f)["q90_half_width"]
     with open(cfg["operating_point"]) as f:
-        op = json.load(f)["best"]  # clinical default (AND, t=0.7)
+        op = json.load(f)["best"]  # miss-minimising default (see operating_point.json)
     with open(cfg["demo_window"]) as f:
         demo = json.load(f)
     tri = pd.read_csv("results/triage.csv")
@@ -199,8 +199,9 @@ with st.expander("Proof: ablation + grouped metrics (95% bootstrap-by-subject CI
              "29.73 [27.1, 32.5] (no CI overlap) | event AUROC 0.951, AUPRC 0.895 "
              "(glucose-only 0.923/0.865 — not just a threshold rule) | T2D-14: "
              "RMSE 31.17 [27.5, 34.4] vs T2D persistence 36.34 [32.9, 39.9], "
-             "AUROC 0.954, AUPRC 0.950 | clinical alert (AND, t=0.7): precision "
-             "0.964, recall 0.669, 1.42 false alerts/patient-day, median lead "
-             "15 min, miss 28% | personalization median lift +1.19 "
+             "AUROC 0.954, AUPRC 0.950 | alert default (AND, t=0.5, misses minimised): precision "
+             "0.907, recall 0.724, 4.25 false alerts/patient-day, median lead "
+             "25 min, miss 10% (t=0.7 precision-first: 0.964/1.42/day) "
+             "| personalization median lift +1.19 "
              "(+9/−5 of 14 T2D) | conformal 90% band ±37.9, held-out coverage 0.888.")
 st.caption(FOOTER)
