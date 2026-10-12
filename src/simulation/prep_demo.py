@@ -8,10 +8,11 @@ import pandas as pd
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "models"))
-from lightgbm_v1 import FEATS, add_features, add_static  # noqa: E402
+from lightgbm_v1 import add_features, add_static  # noqa: E402
 
 REG = lgb.Booster(model_file="models/lgbm_reg60.txt")
 CLF = lgb.Booster(model_file="models/lgbm_event.txt")
+FEATS = REG.feature_name()  # frozen v2 set (v3 branch trains a superset)
 with open("results/conformal.json") as f:
     Q90 = json.load(f)["q90_half_width"]
 

@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "models"))
-from lightgbm_v1 import FEATS, add_features, add_static  # noqa: E402
+from lightgbm_v1 import add_features, add_static  # noqa: E402
 
 app = FastAPI(title="GlucoTwin replay API")
 import yaml
@@ -26,6 +26,10 @@ with open("configs/model.yaml") as f:
     CFG = yaml.safe_load(f)
 REG = lgb.Booster(model_file=CFG["reg_model"])
 CLF = lgb.Booster(model_file=CFG["clf_model"])
+# The frozen booster's OWN feature set. lightgbm_v1.FEATS is the training
+# feature list, which on the v3 branch is a superset (8 extra columns) —
+# never feed extra columns to a frozen v2 model.
+FEATS = REG.feature_name()
 with open(CFG["conformal"]) as f:
     Q90 = json.load(f)["q90_half_width"]
 with open(CFG["operating_point"]) as f:

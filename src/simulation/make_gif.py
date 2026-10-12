@@ -13,7 +13,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "models"))
-from lightgbm_v1 import FEATS, add_features, add_static  # noqa: E402
+from lightgbm_v1 import add_features, add_static  # noqa: E402
 from prep_demo import apply_walk, apply_ragi  # noqa: E402
 
 import lightgbm as lgb  # noqa: E402
@@ -23,6 +23,7 @@ with open("configs/model.yaml") as f:
     CFG = yaml.safe_load(f)
 REG = lgb.Booster(model_file=CFG["reg_model"])
 CLF = lgb.Booster(model_file=CFG["clf_model"])
+FEATS = REG.feature_name()  # frozen v2 set (v3 branch trains a superset)
 Q90 = json.load(open(CFG["conformal"]))["q90_half_width"]
 DEMO = json.load(open(CFG["demo_window"]))
 

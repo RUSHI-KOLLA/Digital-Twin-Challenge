@@ -103,6 +103,14 @@ class TestHeadlines(unittest.TestCase):
         lo, hi = c["rmse_60_ci"]
         self.assertLess(lo, hi)
 
+    def test_v3_documented_not_promoted(self):
+        doc = load("v3_vs_v2.json")
+        self.assertEqual(doc["decision"], "KEEP v2 (no promotion)")
+        self.assertLess(doc["v3"]["rmse_60"], doc["v2"]["rmse_60"])  # direction
+        lo2, hi2 = doc["v2"]["rmse_60_ci"]
+        lo3, hi3 = doc["v3"]["rmse_60_ci"]
+        self.assertTrue(lo3 < hi2 and lo2 < hi3)  # CIs overlap: null result
+
 
 if __name__ == "__main__":
     unittest.main()

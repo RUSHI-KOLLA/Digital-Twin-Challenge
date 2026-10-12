@@ -1,0 +1,56 @@
+{
+  "v2": {
+    "rmse_60": 25.659304011704098,
+    "rmse_60_ci": [
+      23.572901802330698,
+      27.896283217950604
+    ],
+    "auroc": 0.9509187410904892,
+    "auroc_ci": [
+      0.9365163184060609,
+      0.9623441130825104
+    ],
+    "auprc": 0.8950698252795812,
+    "t2d_rmse_60": 31.170075411177315,
+    "t2d_rmse_60_ci": [
+      27.519578077807488,
+      34.41558301063437
+    ],
+    "op_and_05": {
+      "precision": 0.907,
+      "recall": 0.724,
+      "f1": 0.805,
+      "false_alerts_pd": 4.25,
+      "median_lead_min": 25.0,
+      "miss_rate": 0.102
+    }
+  },
+  "v3": {
+    "rmse_60": 23.97121115880844,
+    "rmse_60_ci": [
+      21.907810855462618,
+      26.13317418188751
+    ],
+    "auroc": 0.9590051233512941,
+    "auroc_ci": [
+      0.9447172783794071,
+      0.9692430126036254
+    ],
+    "auprc": 0.9087345218723973,
+    "t2d_rmse_60": 29.250681742004716,
+    "t2d_rmse_60_ci": [
+      25.443090054025255,
+      32.421515828075314
+    ],
+    "op_and_05": {
+      "precision": 0.91,
+      "recall": 0.74,
+      "f1": 0.816,
+      "false_alerts_pd": 4.22,
+      "median_lead_min": 30.0,
+      "miss_rate": 0.1
+    }
+  },
+  "decision": "KEEP v2 (no promotion)",
+  "rationale": "Directional gains everywhere (RMSE -1.69, AUROC +0.008, AUPRC +0.014, T2D RMSE -1.92, op F1 +0.011) BUT 95% bootstrap-by-subject CIs overlap substantially on every metric (v3 RMSE CI [21.91,26.13] vs v2 [23.57,27.90]; AUROC CIs overlap). With n=45 patients the gains are inside noise; promoting on noise violates the honest small-n posture. v3 Tier-1 features archived on branch v3-model-improvements for a larger-n revisit."
+}

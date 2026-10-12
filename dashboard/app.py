@@ -17,7 +17,7 @@ import streamlit as st
 
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "models"))
-from lightgbm_v1 import FEATS, add_features, add_static  # noqa: E402
+from lightgbm_v1 import add_features, add_static  # noqa: E402
 
 st.set_page_config(page_title="GlucoTwin — T2D Digital Twin", layout="wide")
 FOOTER = ("Synthetic composite patient / open data — no open Indian CGM data "
@@ -56,6 +56,9 @@ def load_all():
 
 
 personas, D, REG, CLF, Q90, DEMO, TRI, ABL, OP = load_all()
+# Frozen booster's own feature set (lightgbm_v1.FEATS is the training list,
+# a superset on the v3 branch — extra columns must never reach a v2 model).
+FEATS = REG.feature_name()
 names = [p["name"] for p in personas]
 sel = st.sidebar.selectbox("Patient", names, index=0)
 P = next(p for p in personas if p["name"] == sel)
