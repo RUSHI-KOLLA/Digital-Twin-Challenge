@@ -71,6 +71,31 @@ class TestHeadlines(unittest.TestCase):
         self.assertTrue(0.80 <= c["coverage_test_90"] <= 0.95)
         self.assertIn("q50_half_width", c)
 
+    def test_frozen_v2_untouched(self):
+        import hashlib
+        want = {"models/lgbm_reg60.txt": "10ca2de44a94a471ab538ae471507b52",
+                "models/lgbm_event.txt": "d62fbf7de496dbd871fc2ba02b3b6cc0",
+                "models/freeze.json": "c8484a163c08fbc0e0e81e3869281ebb"}
+        for rel, h in want.items():
+            with open(os.path.join(ROOT, rel), "rb") as f:
+                self.assertEqual(hashlib.md5(f.read()).hexdigest(), h, rel)
+
+    def test_calibration_artifact(self):
+        c = load("calibration.json")
+        for k in ["brier_before", "brier_after", "slope", "intercept",
+                  "precision_before", "precision_after"]:
+            self.assertIn(k, c)
+        self.assertTrue(0.0 <= c["brier_after"] <= 0.25)
+        self.assertGreater(c["slope"], 0.0)
+        self.assertTrue(os.path.exists(
+            os.path.join(ROOT, "results", "reliability.png")))
+
+    def test_clarke_grid(self):
+        eg = load("error_grid.json")
+        self.assertTrue(os.path.exists(
+            os.path.join(ROOT, "results", "clarke.png")))
+        self.assertGreaterEqual(eg["percent"]["A"] + eg["percent"]["B"], 90.0)
+
 
 if __name__ == "__main__":
     unittest.main()

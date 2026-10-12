@@ -49,6 +49,13 @@ Personalization: median lift +1.19 RMSE (+9/−5 of 14 T2D — negatives
 shown). Conformal 90% band ±37.9, held-out patient coverage 0.888 (50% band
 ±10.4, coverage 0.458).
 
+Event head calibration (isotonic, fit on 22 patients, held out 23): Brier
+0.045 → 0.046, precision at the default operating point 0.868 → 0.877 — no
+material gain, so calibration is NOT wired into serving; the head ships raw
+with slope 1.07 / intercept −0.39 reported (`results/calibration.json`).
+Clarke Error Grid on the +60 forecast: A 80.0%, B 18.4% (A+B 98.5%), D 1.5%,
+E 0.0% (`results/error_grid.json`).
+
 ## Honest limits (say it ourselves)
 
 - Raw steps exist for 1/45 patients → steps features were dead weight and

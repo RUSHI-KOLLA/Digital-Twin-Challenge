@@ -1,0 +1,18 @@
+{
+  "counts": {
+    "A": 109719,
+    "B": 25241,
+    "C": 122,
+    "D": 2006,
+    "E": 0
+  },
+  "percent": {
+    "A": 80.04,
+    "B": 18.41,
+    "C": 0.09,
+    "D": 1.46,
+    "E": 0.0
+  },
+  "n": 137088,
+  "method": "Clarke EGA on v2 OOF +60min forecast (see clarke_zone)"
+}
