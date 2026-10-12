@@ -10,17 +10,6 @@
     "miss_rate": 0.1,
     "n_crossings": 923
   },
-  "precision_first": {
-    "rule": "AND",
-    "t": 0.7,
-    "precision": 0.966,
-    "recall": 0.681,
-    "f1": 0.798,
-    "false_alerts_pd": 1.38,
-    "median_lead_min": 25.0,
-    "miss_rate": 0.235,
-    "n_crossings": 923
-  },
   "all": [
     {
       "rule": "AND",
@@ -397,5 +386,16 @@
       "n_crossings": 923
     }
   ],
-  "note": "best = miss-minimising default (lowest miss rate with false_alerts_pd<=5.0 on the AND rule); precision_first (t=0.7) kept as the low-fatigue alternative; alert evaluated per 5-min bin"
+  "precision_first": {
+    "rule": "AND",
+    "t": 0.7,
+    "precision": 0.966,
+    "recall": 0.681,
+    "f1": 0.798,
+    "false_alerts_pd": 1.38,
+    "median_lead_min": 25.0,
+    "miss_rate": 0.235,
+    "n_crossings": 923
+  },
+  "note": "best = miss-minimising default: lowest miss rate subject to false_alerts_pd<=5.0 (a missed excursion harms more than a false alarm); precision_first (t=0.7) kept as the low-fatigue alternative; alert evaluated per 5-min bin"
 }
