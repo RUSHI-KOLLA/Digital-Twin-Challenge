@@ -96,6 +96,13 @@ class TestHeadlines(unittest.TestCase):
             os.path.join(ROOT, "results", "clarke.png")))
         self.assertGreaterEqual(eg["percent"]["A"] + eg["percent"]["B"], 90.0)
 
+    def test_cross_cohort(self):
+        c = load("cross_cohort.json")
+        self.assertGreaterEqual(c["n_patients"], 90)
+        self.assertIn("drop_rmse", c)  # gap documented, not hidden
+        lo, hi = c["rmse_60_ci"]
+        self.assertLess(lo, hi)
+
 
 if __name__ == "__main__":
     unittest.main()

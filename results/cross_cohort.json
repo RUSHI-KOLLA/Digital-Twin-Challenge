@@ -1,0 +1,27 @@
+{
+  "n_patients": 100,
+  "n_rows": 110062,
+  "event_60_rate": 0.347740364521815,
+  "rmse_60": 46.438133910764975,
+  "rmse_60_ci": [
+    43.280798632110184,
+    49.45820017447489
+  ],
+  "event_auroc": 0.8531937496932142,
+  "event_auprc": 0.823781405825332,
+  "method": "frozen v2 (trained on CGMacros, zero refit); CGM-only cohort (meals/HR absent -> zeros/NaN); same 5-min labels",
+  "event_auroc_ci": [
+    0.829949775508435,
+    0.871789594389158
+  ],
+  "cgmacros_reference": {
+    "rmse_60": 25.659304011704098,
+    "rmse_60_ci": [
+      23.572901802330698,
+      27.896283217950604
+    ],
+    "auroc": 0.9509187410904892
+  },
+  "drop_rmse": 20.778829899060877,
+  "drop_auroc": 0.09772499139727508
+}

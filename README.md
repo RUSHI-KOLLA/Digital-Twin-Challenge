@@ -56,6 +56,16 @@ with slope 1.07 / intercept −0.39 reported (`results/calibration.json`).
 Clarke Error Grid on the +60 forecast: A 80.0%, B 18.4% (A+B 98.5%), D 1.5%,
 E 0.0% (`results/error_grid.json`).
 
+## Generalisation (external cohort, zero refit)
+
+Frozen v2 on ShanghaiT2DM (Zhao et al., Sci Data 2023, CC-BY; n=100 T2D,
+15-min CGM upsampled to 5 min): RMSE@60 46.44 [43.3, 49.5] (drop +20.8 vs
+CGMacros), event AUROC 0.853 [0.830, 0.872] (drop 0.098). Honest read: this
+is a CGM-only cohort — meals and HR are absent, so the model's meal features
+are zeroed and post-meal spikes are unforecastable there. Discrimination
+survives (0.853); level accuracy does not. Prospective validation remains
+future work.
+
 ## Honest limits (say it ourselves)
 
 - Raw steps exist for 1/45 patients → steps features were dead weight and
