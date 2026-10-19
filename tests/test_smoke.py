@@ -196,3 +196,20 @@ class TestJudgeQA(unittest.TestCase):
         self.assertIn("freeze.json", content)
         self.assertIn("counterfactual_validation.json", content)
         self.assertIn("operating_point.json", content)
+
+
+class TestModelCard(unittest.TestCase):
+    def test_model_card_exists_and_has_required_sections(self):
+        path = os.path.join(ROOT, "docs", "MODEL_CARD.md")
+        self.assertTrue(os.path.exists(path), "docs/MODEL_CARD.md does not exist")
+        with open(path) as f:
+            content = f.read()
+        # Check required sections
+        self.assertIn("Intended Use", content)
+        self.assertIn("Known Limitations", content)
+        self.assertIn("Out-of-Scope Use", content)
+        self.assertIn("Population", content)
+        self.assertIn("Training Data", content)
+        self.assertIn("Metrics", content)
+        self.assertIn("Ethical Considerations", content)
+        self.assertIn("Reproduction", content)

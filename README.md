@@ -88,6 +88,12 @@ matching. Artifacts: `results/counterfactual_validation.json`,
 See [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md) for the 8 hardest questions with
 number-backed answers.
 
+## Model Card
+
+See [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md) for intended use, population,
+training data, metrics with CIs, known limitations, ethical considerations,
+and reproduction commands.
+
 ## Honest limits (say it ourselves)
 
 - Raw steps exist for 1/45 patients → steps features were dead weight and
