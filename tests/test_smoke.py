@@ -75,7 +75,7 @@ class TestHeadlines(unittest.TestCase):
         import hashlib
         want = {"models/lgbm_reg60.txt": "10ca2de44a94a471ab538ae471507b52",
                 "models/lgbm_event.txt": "d62fbf7de496dbd871fc2ba02b3b6cc0",
-                "models/freeze.json": "c8484a163c08fbc0e0e81e3869281ebb"}
+                "models/freeze.json": "dfaa96e374ae5f018bbf9a807c5bdad5"}
         for rel, h in want.items():
             with open(os.path.join(ROOT, rel), "rb") as f:
                 self.assertEqual(hashlib.md5(f.read()).hexdigest(), h, rel)
@@ -126,3 +126,27 @@ class TestCounterfactualValidation(unittest.TestCase):
         self.assertGreater(c["n_valid_pairs"], 10)
         self.assertTrue(os.path.exists(
             os.path.join(ROOT, "results", "counterfactual.png")))
+
+
+class TestFreezeOperatingPoint(unittest.TestCase):
+    def test_freeze_operating_point_matches_artifact(self):
+        with open(os.path.join(ROOT, "models", "freeze.json")) as f:
+            fr = json.load(f)
+        op = load("operating_point.json")["best"]
+        # freeze.json operating_point must match the artifact's "best"
+        self.assertEqual(fr["operating_point"]["rule"], op["rule"])
+        self.assertEqual(fr["operating_point"]["t"], op["t"])
+        self.assertEqual(fr["operating_point"]["precision"], op["precision"])
+        self.assertEqual(fr["operating_point"]["recall"], op["recall"])
+        self.assertEqual(fr["operating_point"]["false_alerts_per_patient_day"], op["false_alerts_pd"])
+        self.assertEqual(fr["operating_point"]["median_lead_min"], op["median_lead_min"])
+        self.assertEqual(fr["operating_point"]["miss_rate"], op["miss_rate"])
+        # precision_first_alternative must match artifact's precision_first
+        pf = load("operating_point.json")["precision_first"]
+        self.assertEqual(fr["precision_first_alternative"]["rule"], pf["rule"])
+        self.assertEqual(fr["precision_first_alternative"]["t"], pf["t"])
+        self.assertEqual(fr["precision_first_alternative"]["precision"], pf["precision"])
+        self.assertEqual(fr["precision_first_alternative"]["recall"], pf["recall"])
+        self.assertEqual(fr["precision_first_alternative"]["false_alerts_per_patient_day"], pf["false_alerts_pd"])
+        self.assertEqual(fr["precision_first_alternative"]["median_lead_min"], pf["median_lead_min"])
+        self.assertEqual(fr["precision_first_alternative"]["miss_rate"], pf["miss_rate"])
