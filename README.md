@@ -83,6 +83,11 @@ Directionally correct but noisy — expected at this n with observational
 matching. Artifacts: `results/counterfactual_validation.json`,
 `results/counterfactual.png`.
 
+## Judge Q&A
+
+See [`docs/JUDGE_QA.md`](docs/JUDGE_QA.md) for the 8 hardest questions with
+number-backed answers.
+
 ## Honest limits (say it ourselves)
 
 - Raw steps exist for 1/45 patients → steps features were dead weight and

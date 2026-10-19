@@ -178,3 +178,21 @@ class TestCrossCohortInterpretable(unittest.TestCase):
         full_ci = c["cgmacros_reference"]["rmse_60_ci"]
         self.assertTrue(cg["rmse_60_ci"][0] < full_ci[1] and full_ci[0] < cg["rmse_60_ci"][1],
                         "CGM-only CIs should overlap full CGMacros CIs (missing data not the cause)")
+
+
+class TestJudgeQA(unittest.TestCase):
+    def test_judge_qa_exists_and_has_8_questions(self):
+        path = os.path.join(ROOT, "docs", "JUDGE_QA.md")
+        self.assertTrue(os.path.exists(path), "docs/JUDGE_QA.md does not exist")
+        with open(path) as f:
+            content = f.read()
+        # Check for all 8 numbered questions
+        for i in range(1, 9):
+            self.assertIn(f"## {i}.", content, f"Question {i} not found")
+        # Check key citations exist
+        self.assertIn("cross_cohort.json", content)
+        self.assertIn("metrics_ci.json", content)
+        self.assertIn("v3_vs_v2.json", content)
+        self.assertIn("freeze.json", content)
+        self.assertIn("counterfactual_validation.json", content)
+        self.assertIn("operating_point.json", content)
