@@ -106,6 +106,13 @@ def main():
     d["escore"] = clf.predict(X)
     pids = np.array(sorted(d["patient_id"].unique()))
     rmse = lambda s: float(np.sqrt(np.mean((s["target_glucose_60"] - s["p60"]) ** 2)))
+    
+    # External persistence baseline on ShanghaiT2DM
+    d["pers_60"] = d["glucose"]
+    persistence_rmse = float(np.sqrt(np.mean((d["target_glucose_60"] - d["pers_60"]) ** 2)))
+    persistence_rmse_ci = boot(pids, d, lambda s: float(
+        np.sqrt(np.mean((s["target_glucose_60"] - s["pers_60"]) ** 2))))
+    
     res = {
         "n_patients": int(len(pids)), "n_rows": int(len(d)),
         "event_60_rate": float(d["event_60"].mean()),
@@ -125,6 +132,11 @@ def main():
         "auroc": v2["frozen"]["auroc"]}
     res["drop_rmse"] = res["rmse_60"] - res["cgmacros_reference"]["rmse_60"]
     res["drop_auroc"] = res["cgmacros_reference"]["auroc"] - res["event_auroc"]
+    
+    # External persistence baseline
+    res["persistence_rmse_60"] = persistence_rmse
+    res["persistence_rmse_60_ci"] = persistence_rmse_ci
+    
     json.dump(res, open("results/cross_cohort.json", "w"), indent=2)
     print(json.dumps({k: (round(v, 3) if isinstance(v, float) else v)
                       for k, v in res.items() if k != "cgmacros_reference"},

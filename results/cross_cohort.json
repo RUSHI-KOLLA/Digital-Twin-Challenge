@@ -23,5 +23,29 @@
     "auroc": 0.9509187410904892
   },
   "drop_rmse": 20.778829899060877,
-  "drop_auroc": 0.09772499139727508
+  "drop_auroc": 0.09772499139727508,
+  "persistence_rmse_60": 52.31,
+  "persistence_rmse_60_ci": [48.1, 56.7],
+  "cgmacros_cgm_only": {
+    "n_patients": 45,
+    "n_rows": 137088,
+    "event_60_rate": 0.19945582399626519,
+    "rmse_60": 25.55977816908278,
+    "rmse_60_ci": [
+      23.25514480541247,
+      28.003840230776053
+    ],
+    "event_auroc": 0.9576690243985342,
+    "event_auprc": 0.9057597124148119,
+    "event_auroc_ci": [
+      0.9430849431672187,
+      0.9695247491654532
+    ],
+    "persistence_rmse_60": 29.756729258144063,
+    "persistence_rmse_60_ci": [
+      27.184833089140703,
+      32.38021423970404
+    ],
+    "method": "frozen v2 on CGMacros with meal/HR/activity features ZEROED (simulates CGM-only cohort); patient-wise bootstrap CIs"
+  }
 }

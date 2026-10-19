@@ -150,3 +150,31 @@ class TestFreezeOperatingPoint(unittest.TestCase):
         self.assertEqual(fr["precision_first_alternative"]["false_alerts_per_patient_day"], pf["false_alerts_pd"])
         self.assertEqual(fr["precision_first_alternative"]["median_lead_min"], pf["median_lead_min"])
         self.assertEqual(fr["precision_first_alternative"]["miss_rate"], pf["miss_rate"])
+
+
+class TestCrossCohortInterpretable(unittest.TestCase):
+    def test_cross_cohort_has_persistence_and_cgmacros_cgm_only(self):
+        c = load("cross_cohort.json")
+        # External persistence baseline on Shanghai
+        self.assertIn("persistence_rmse_60", c)
+        self.assertIn("persistence_rmse_60_ci", c)
+        self.assertIsInstance(c["persistence_rmse_60"], (int, float))
+        self.assertIsInstance(c["persistence_rmse_60_ci"], list)
+        self.assertEqual(len(c["persistence_rmse_60_ci"]), 2)
+        self.assertLess(c["persistence_rmse_60_ci"][0], c["persistence_rmse_60_ci"][1])
+        # CGMacros with features zeroed (missing-data control)
+        self.assertIn("cgmacros_cgm_only", c)
+        cg = c["cgmacros_cgm_only"]
+        self.assertIn("rmse_60", cg)
+        self.assertIn("rmse_60_ci", cg)
+        self.assertIn("event_auroc", cg)
+        self.assertIn("event_auroc_ci", cg)
+        self.assertIsInstance(cg["rmse_60"], (int, float))
+        self.assertIsInstance(cg["rmse_60_ci"], list)
+        self.assertEqual(len(cg["rmse_60_ci"]), 2)
+        self.assertLess(cg["rmse_60_ci"][0], cg["rmse_60_ci"][1])
+        # The missing-data effect should be small (CIs overlap with full CGMacros)
+        full_rmse = c["cgmacros_reference"]["rmse_60"]
+        full_ci = c["cgmacros_reference"]["rmse_60_ci"]
+        self.assertTrue(cg["rmse_60_ci"][0] < full_ci[1] and full_ci[0] < cg["rmse_60_ci"][1],
+                        "CGM-only CIs should overlap full CGMacros CIs (missing data not the cause)")

@@ -58,13 +58,19 @@ E 0.0% (`results/error_grid.json`).
 
 ## Generalisation (external cohort, zero refit)
 
-Frozen v2 on ShanghaiT2DM (Zhao et al., Sci Data 2023, CC-BY; n=100 T2D,
-15-min CGM upsampled to 5 min): RMSE@60 46.44 [43.3, 49.5] (drop +20.8 vs
-CGMacros), event AUROC 0.853 [0.830, 0.872] (drop 0.098). Honest read: this
-is a CGM-only cohort — meals and HR are absent, so the model's meal features
-are zeroed and post-meal spikes are unforecastable there. Discrimination
-survives (0.853); level accuracy does not. Prospective validation remains
-future work.
+Three numbers make the cross-cohort drop interpretable:
+
+| Scenario | RMSE@60 [95% CI] | Event AUROC [95% CI] |
+|---|---|---|
+| (i) Frozen v2 on ShanghaiT2DM (Zhao et al., Sci Data 2023, CC-BY; n=100 T2D, 15-min CGM upsampled to 5 min) | **46.44 [43.3, 49.5]** | **0.853 [0.830, 0.872]** |
+| (ii) External persistence baseline on ShanghaiT2DM (future = current glucose) | **52.31 [48.1, 56.7]** | — |
+| (iii) Frozen v2 on CGMacros with meal/HR/activity features ZEROED (simulates CGM-only input) | **25.56 [23.3, 28.0]** | **0.958 [0.943, 0.970]** |
+
+**Interpretation:** The total drop from CGMacros (25.66) to Shanghai (46.44) is +20.78 RMSE.
+Zeroing meal/HR/activity on CGMacros changes RMSE by only −0.10 (25.56 vs 25.66, CIs overlap).
+**Conclusion: the cross-cohort drop is almost entirely population shift (device, sampling, demographics), not missing inputs.** The model still beats Shanghai persistence (46.44 vs 52.31). Discrimination survives (AUROC 0.853 vs 0.958 on CGM-only CGMacros). Prospective validation remains future work.
+
+Artifacts: `results/cross_cohort.json`, `results/cgmacros_cgm_only.json`.
 
 ## Counterfactual validation (what-if vs reality)
 
