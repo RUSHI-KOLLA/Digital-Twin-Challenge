@@ -66,6 +66,17 @@ are zeroed and post-meal spikes are unforecastable there. Discrimination
 survives (0.853); level accuracy does not. Prospective validation remains
 future work.
 
+## Counterfactual validation (what-if vs reality)
+
+Matched meal pairs (n=353) with high vs low post-meal HR increase (proxy for
+activity). Observed mean glucose reduction from activity: ~0 mg/dL (high
+variance, 52.9 mg/dL SD). What-if simulator (add 15-min walk → +HR/activity)
+predicts mean reduction 1.67 mg/dL. **Correlation between observed and
+predicted intervention effect: r = 0.145** (p < 0.05), RMSE 44.8 mg/dL.
+Directionally correct but noisy — expected at this n with observational
+matching. Artifacts: `results/counterfactual_validation.json`,
+`results/counterfactual.png`.
+
 ## Honest limits (say it ourselves)
 
 - Raw steps exist for 1/45 patients → steps features were dead weight and

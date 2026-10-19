@@ -114,3 +114,15 @@ class TestHeadlines(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCounterfactualValidation(unittest.TestCase):
+    def test_counterfactual_artifact(self):
+        c = load("counterfactual_validation.json")
+        self.assertIn("correlation", c)
+        self.assertIsNotNone(c["correlation"])
+        self.assertGreater(c["correlation"], 0.0)  # directionally correct
+        self.assertIn("n_valid_pairs", c)
+        self.assertGreater(c["n_valid_pairs"], 10)
+        self.assertTrue(os.path.exists(
+            os.path.join(ROOT, "results", "counterfactual.png")))

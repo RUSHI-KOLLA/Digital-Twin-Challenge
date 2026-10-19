@@ -1,0 +1,12 @@
+{
+  "n_matched_pairs": 594,
+  "n_valid_pairs": 353,
+  "hr_threshold_used": 5.0,
+  "observed_mean_diff": -0.012716049382715202,
+  "observed_std_diff": 52.904622381729006,
+  "predicted_effect_mean": 1.6697845909562563,
+  "predicted_effect_std": 4.189062589622076,
+  "correlation": 0.1447186565649545,
+  "rmse": 44.840339623864885,
+  "mae": 32.397049126329996
+}
